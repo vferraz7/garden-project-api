@@ -53,8 +53,11 @@ class InventoryRepositoryMongo extends InventoryRepository {
 
   async findLowStock(ownerId) {
     const oid = toOwnerObjectId(ownerId);
+    // minStock 0 = sem alerta: sem isso, um equipamento com 0/0 aparecia
+    // como "repor". Mesma regra do front (stock.isLowStock).
     const docs = await InventoryItem.find({
       ownerId: oid,
+      minStock: { $gt: 0 },
       $expr: { $lte: ["$quantity", "$minStock"] },
     })
       .sort({ quantity: 1 })

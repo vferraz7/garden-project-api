@@ -50,4 +50,18 @@ describe("integration / InventoryRepositoryMongo", () => {
     expect(low.some((x: { id: string }) => x.id === "inv1")).toBe(true);
     expect(low.some((x: { id: string }) => x.id === "inv2")).toBe(false);
   });
+
+  it("minStock 0 (ou ausente) significa sem alerta", async () => {
+    const base = { ownerId, category: "iluminacao", unit: "un", lastUpdated: new Date() };
+    await repo.create({ ...base, id: "zero-zero", name: "0/0", quantity: 0, minStock: 0 });
+    await repo.create({ ...base, id: "one-zero", name: "1/0", quantity: 1, minStock: 0 });
+    await repo.create({ ...base, id: "no-min", name: "sem mínimo", quantity: 0 });
+    await repo.create({ ...base, id: "at-min", name: "no mínimo", category: "nutrientes", unit: "mL", quantity: 2, minStock: 2 });
+
+    const noMin = await InventoryItem.findOne({ id: "no-min" }).lean();
+    expect(noMin.minStock).toBe(0);
+
+    const ids = (await repo.findLowStock(ownerId)).map((x: { id: string }) => x.id);
+    expect(ids).toEqual(["at-min"]);
+  });
 });

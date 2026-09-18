@@ -88,7 +88,7 @@ app.get("/api", (req, res) => {
       },
       inventory: {
         "GET /api/inventory": "Lista itens (autenticado). Query: category, limit, skip",
-        "GET /api/inventory/low-stock": "Itens com quantity <= minStock",
+        "GET /api/inventory/low-stock": "Itens com minStock > 0 e quantity <= minStock",
         "GET /api/inventory/:id": "Item por id",
         "POST /api/inventory": "Cria item",
         "PATCH /api/inventory/:id": "Atualiza item",
