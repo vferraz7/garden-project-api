@@ -19,9 +19,10 @@ const inventoryItemSchema = new mongoose.Schema(
       min: [0, "quantity não pode ser negativa"],
     },
     unit: { type: String, required: true },
+    // 0 = sem alerta de estoque mínimo (equipamentos, itens sem mínimo).
     minStock: {
       type: Number,
-      required: true,
+      default: 0,
       min: [0, "minStock não pode ser negativo"],
     },
     brand: { type: String, default: "" },

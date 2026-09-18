@@ -22,6 +22,8 @@ const plantSchema = new mongoose.Schema(
       enum: { values: PLANT_STATUSES, message: "Status da planta inválido" },
     },
     ageDays: { type: Number, default: 0 },
+    // Data em que ageDays foi informado; o app soma os dias desde então.
+    ageRefDate: { type: Date, default: null },
     origin: { type: String, enum: ["seed", "clone"], default: "seed" },
     seedBank: { type: String, default: "" },
     phenotype: {
