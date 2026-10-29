@@ -1,0 +1,361 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 1651234567890,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [
+            {"options": {"0": {"color": "red", "index": 0, "text": "Down"}, "1": {"color": "green", "index": 1, "text": "Up"}}, "type": "value"}
+          ],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.5}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "up{job=\"gp-api\"}",
+          "format": "time_series",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Service Status",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "reqps"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "sum by (method, route) (rate(gp_http_requests_total[5m]))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Request Rate (req/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 1}]},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 18, "y": 0},
+      "id": 3,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, route) (rate(gp_http_request_duration_seconds_bucket[5m])))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "p50 {{route}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(gp_http_request_duration_seconds_bucket[5m])))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "p95 {{route}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le, route) (rate(gp_http_request_duration_seconds_bucket[5m])))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "p99 {{route}}",
+          "refId": "C"
+        }
+      ],
+      "title": "HTTP Latency (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.01}, {"color": "red", "value": 0.05}]},
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "textMode": "auto"},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(gp_http_requests_total{status_code=~\"5..\"}[5m])) / sum by (route) (rate(gp_http_requests_total[5m]))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ],
+      "title": "5xx Error Rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "ops"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 8},
+      "id": 5,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "sum by (operation, collection) (rate(gp_db_operations_total[5m]))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{operation}} {{collection}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DB Operations Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.1}, {"color": "red", "value": 0.5}]},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 18, "y": 8},
+      "id": 6,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, operation, collection) (rate(gp_db_operation_duration_seconds_bucket[5m])))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "p50 {{operation}} {{collection}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, operation, collection) (rate(gp_db_operation_duration_seconds_bucket[5m])))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "p95 {{operation}} {{collection}}",
+          "refId": "B"
+        }
+      ],
+      "title": "DB Latency (seconds)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.7}, {"color": "red", "value": 0.85}]},
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+      "id": 7,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "textMode": "auto"},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "gp_nodejs_heap_size_used_bytes / gp_nodejs_heap_size_total_bytes",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Heap Usage",
+          "refId": "A"
+        }
+      ],
+      "title": "Heap Memory Usage",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 8,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "gp_nodejs_heap_size_used_bytes",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Heap Used",
+          "refId": "A"
+        },
+        {
+          "expr": "gp_nodejs_heap_size_total_bytes",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Heap Total",
+          "refId": "B"
+        },
+        {
+          "expr": "gp_process_resident_memory_bytes",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "RSS",
+          "refId": "C"
+        }
+      ],
+      "title": "Memory Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.05}, {"color": "red", "value": 0.1}]},
+          "unit": "s"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 9,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "gp_nodejs_eventloop_lag_seconds",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Event Loop Lag",
+          "refId": "A"
+        },
+        {
+          "expr": "gp_nodejs_eventloop_lag_p99_seconds",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Event Loop Lag p99",
+          "refId": "B"
+        }
+      ],
+      "title": "Event Loop Lag",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": true},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "id": 10,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "gp_active_users",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Active Users",
+          "refId": "A"
+        },
+        {
+          "expr": "gp_gardens_total",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Total Gardens",
+          "refId": "B"
+        }
+      ],
+      "title": "Business Metrics",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["gp-api", "nodejs", "express", "mongodb"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "gp-api - Garden Project API",
+  "uid": "gp-api-dashboard",
+  "version": 1,
+  "weekStart": ""
+}

@@ -11,6 +11,7 @@ const healthRoutes = require("./routes/health.routes");
 
 const { httpLogger } = require("./middleware/httpLogger");
 const { metricsMiddleware } = require("./middleware/metrics");
+const { requestIdMiddleware, requestLogger } = require("./middleware/requestId");
 
 if (process.env.NODE_ENV === "production") {
   const raw = process.env.CORS_ORIGIN;
@@ -41,6 +42,10 @@ app.use(
   })
 );
 app.use(express.json({ limit: "512kb" }));
+
+// Request ID and logging middleware
+app.use(requestIdMiddleware);
+app.use(requestLogger);
 
 // Observability middleware
 app.use(httpLogger);

@@ -1,0 +1,14 @@
+
+> gp-api@1.0.0 dev
+> tsx watch src/server.ts
+
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[tracing] OpenTelemetry initialized
+[tracing] Prometheus scrape endpoint: http://localhost:9464/metrics
+[2026-10-29 13:35:27.905 -0300] [32mINFO[39m: [36mConnected to MongoDB[39m
+    [35mservice[39m: "gp-api"
+    [35menv[39m: "development"
+[2026-10-29 13:35:27.907 -0300] [32mINFO[39m: [36mServer started[39m
+    [35mservice[39m: "gp-api"
+    [35menv[39m: "development"
+    [35mport[39m: 3000

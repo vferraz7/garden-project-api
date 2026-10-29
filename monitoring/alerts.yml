@@ -1,0 +1,143 @@
+groups:
+  - name: gp-api-alerts
+    interval: 30s
+    rules:
+      # Instance alerts
+      - alert: GPApiDown
+        expr: up{job="gp-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "gp-api instance {{ $labels.instance }} is down"
+          description: "gp-api has been down for more than 1 minute"
+
+      # HTTP latency alerts
+      - alert: GPApiHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, route) (rate(gp_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP latency on {{ $labels.route }}"
+          description: "95th percentile latency > 1s for {{ $labels.route }}"
+
+      - alert: GPApiVeryHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le, route) (rate(gp_http_request_duration_seconds_bucket[5m]))
+          ) > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Very high HTTP latency on {{ $labels.route }}"
+          description: "99th percentile latency > 5s for {{ $labels.route }}"
+
+      # HTTP error rate alerts
+      - alert: GPApiHighErrorRate
+        expr: |
+          sum by (route) (rate(gp_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum by (route) (rate(gp_http_requests_total[5m]))
+          > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.route }}"
+          description: "5xx error rate > 5% for {{ $labels.route }}"
+
+      - alert: GPApiCriticalErrorRate
+        expr: |
+          sum by (route) (rate(gp_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum by (route) (rate(gp_http_requests_total[5m]))
+          > 0.2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical 5xx error rate on {{ $labels.route }}"
+          description: "5xx error rate > 20% for {{ $labels.route }}"
+
+      # Database alerts
+      - alert: GPDatabaseOperationsHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, operation, collection) (rate(gp_db_operation_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High DB latency for {{ $labels.operation }} on {{ $labels.collection }}"
+          description: "95th percentile DB latency > 500ms"
+
+      - alert: GPDatabaseErrorRate
+        expr: |
+          sum by (operation, collection) (rate(gp_db_operations_total{status="error"}[5m]))
+          /
+          sum by (operation, collection) (rate(gp_db_operations_total[5m]))
+          > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB error rate for {{ $labels.operation }} on {{ $labels.collection }}"
+          description: "DB error rate > 1%"
+
+      # Resource alerts
+      - alert: GPApiHighMemoryUsage
+        expr: |
+          (gp_nodejs_heap_size_used_bytes / gp_nodejs_heap_size_total_bytes) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Heap usage > 85% for 10 minutes"
+
+      - alert: GPApiCriticalMemoryUsage
+        expr: |
+          (gp_nodejs_heap_size_used_bytes / gp_nodejs_heap_size_total_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Heap usage > 95% for 5 minutes - potential memory leak"
+
+      - alert: GPApiHighCpuUsage
+        expr: |
+          rate(gp_process_cpu_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage > 80% for 10 minutes"
+
+      - alert: GPApiEventLoopLag
+        expr: |
+          gp_nodejs_eventloop_lag_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Event loop lag on {{ $labels.instance }}"
+          description: "Event loop lag > 100ms for 5 minutes"
+
+      # Business metrics alerts
+      - alert: GPApiNoHealthyInstances
+        expr: |
+          count(up{job="gp-api"} == 1) == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No healthy gp-api instances"
+          description: "All gp-api instances are down"

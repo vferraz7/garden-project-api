@@ -6,6 +6,11 @@ Implementação completa de observabilidade para a API Garden Project com:
 - **Logs estruturados** usando Pino
 - **Métricas Prometheus** no endpoint `/metrics`
 - **Health checks profundos** (`/health` e `/health/deep` com ping no banco de dados)
+- **Correlação de Request ID** para distributed tracing
+- **Tracing distribuído** com OpenTelemetry
+- **Alertas Prometheus** configurados
+- **Dashboard Grafana** pronto para uso
+- **Stack de monitoramento** com Docker Compose (Prometheus + Grafana + Loki + Alertmanager)
 
 ---
 
@@ -19,7 +24,16 @@ Implementação completa de observabilidade para a API Garden Project com:
     "pino": "^9.0.0",
     "pino-http": "^10.0.0",
     "pino-pretty": "^11.0.0",
-    "prom-client": "^15.1.0"
+    "prom-client": "^15.1.0",
+    "uuid": "^9.0.0",
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/sdk-node": "^0.51.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.43.0",
+    "@opentelemetry/instrumentation-express": "^0.41.0",
+    "@opentelemetry/instrumentation-http": "^0.50.0",
+    "@opentelemetry/instrumentation-mongoose": "^0.37.0",
+    "@opentelemetry/resources": "^1.24.0",
+    "@opentelemetry/semantic-conventions": "^1.24.0"
   }
 }
 ```
@@ -45,6 +59,17 @@ Implementação completa de observabilidade para a API Garden Project com:
   - `gp_active_users` - Gauge de usuários ativos
   - `gp_gardens_total` - Gauge de jardins totais
 
+#### Configuração de Tracing (`src/config/tracing.ts`)
+- OpenTelemetry SDK configurado com:
+  - Auto-instrumentação para Express, HTTP, Mongoose
+  - Resource attributes: service name, version, environment
+  - Traces exportados (métricas continuam no `/api/metrics` via prom-client)
+
+#### Middleware de Request ID (`src/middleware/requestId.ts`)
+- Gera UUID v4 para cada requisição (ou usa `X-Request-ID` header)
+- Adiciona `req.id` e header de resposta `X-Request-ID`
+- Logger de requisição com duração e status code
+
 #### Middleware de Log HTTP (`src/middleware/httpLogger.ts`)
 - Baseado em `pino-http`
 - Log automático de todas as requisições/respostas
@@ -64,11 +89,46 @@ Implementação completa de observabilidade para a API Garden Project com:
   - Retorna 200 (healthy) ou 503 (unhealthy)
 - `GET /api/metrics` - Endpoint Prometheus
 
+#### Prometheus Alert Rules (`monitoring/alerts.yml`)
+Regras de alerta para:
+- Instância down
+- Latência HTTP alta (p95 > 1s, p99 > 5s)
+- Taxa de erro 5xx alta (>5% warning, >20% critical)
+- Latência DB alta (p95 > 500ms)
+- Taxa de erro DB (>1%)
+- Uso de memória alto (>85% warning, >95% critical)
+- CPU alto (>80%)
+- Event loop lag (>100ms)
+- Nenhuma instância saudável
+
+#### Grafana Dashboard (`monitoring/grafana-dashboard.json`)
+Dashboard com 10 painéis:
+1. Service Status (up/down)
+2. Request Rate (req/s)
+3. HTTP Latency (p50, p95, p99)
+4. 5xx Error Rate
+5. DB Operations Rate
+6. DB Latency (p50, p95)
+7. Heap Memory Usage
+8. Memory Usage (heap used/total, RSS)
+9. Event Loop Lag
+10. Business Metrics (Active Users, Total Gardens)
+
+#### Docker Compose Monitoring (`monitoring/docker-compose.yml`)
+Stack completa com:
+- Prometheus (porta 9090)
+- Grafana (porta 3001, admin/admin)
+- Loki (porta 3100) - log aggregation
+- Promtail - log shipper
+- Alertmanager (porta 9093)
+
 ---
 
 ### 3. Arquivos Modificados
 
 #### `src/app.ts`
+- Adicionado middleware `requestIdMiddleware` (primeiro)
+- Adicionado middleware `requestLogger`
 - Adicionado middleware `httpLogger` (após helmet/cors)
 - Adicionado middleware `metricsMiddleware`
 - Removido endpoint `/health` simples
@@ -77,6 +137,9 @@ Implementação completa de observabilidade para a API Garden Project com:
 #### `src/server.ts`
 - Substituído `console.log` por `logger.info`
 - Substituído `console.error` por `logger.error`
+- Adicionado inicialização de OpenTelemetry (`startTracing()`)
+- Adicionado graceful shutdown com `shutdownTracing()`
+- Handlers para SIGTERM/SIGINT
 
 #### `src/config/database.ts`
 - Substituído `console.log` por `logger.info`
@@ -172,17 +235,31 @@ curl http://localhost:3000/api/metrics
 - `gp_process_cpu_seconds_total 1.359`
 - `gp_nodejs_heap_size_used_bytes 30167160`
 
-### 5. Verificar Logs Estruturados
+### 5. Testar Request ID Correlation
+```bash
+# Com Request ID customizado
+curl -H "X-Request-ID: meu-request-123" http://localhost:3000/api/health
+
+# Sem Request ID (gera UUID automaticamente)
+curl http://localhost:3000/api/health -v
+```
+**Header de resposta:** `X-Request-ID: meu-request-123` (ou UUID gerado)
+
+### 6. Verificar Logs Estruturados
 Os logs aparecem no console com formato JSON estruturado (pretty em dev):
 ```
-[INFO]  Server started
+[INFO]  Incoming request
 {
   "service": "gp-api",
   "env": "development",
-  "port": 3000,
+  "requestId": "abc-123",
+  "method": "GET",
+  "url": "/api/health",
+  "ip": "::1",
+  "userAgent": "curl/8.0.0",
   "level": 30,
   "time": "2026-10-29T14:23:50.261Z",
-  "msg": "Server started"
+  "msg": "Incoming request"
 }
 ```
 
@@ -211,6 +288,23 @@ npx vitest run tests/unit/middleware/httpLogger.test.ts tests/unit/middleware/me
 # Testes de integração de rotas
 npx vitest run tests/integration/routes/health.routes.test.ts
 ```
+
+---
+
+## Subir Stack de Monitoramento Local
+
+```bash
+cd monitoring
+docker-compose up -d
+```
+
+Acessos:
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3001 (admin/admin)
+- **Alertmanager**: http://localhost:9093
+- **Loki**: http://localhost:3100
+
+O dashboard "gp-api - Garden Project API" será provisionado automaticamente no Grafana.
 
 ---
 
@@ -245,6 +339,19 @@ readinessProbe:
     - targets: ['gp-api:3000']
 ```
 
+### PrometheusRule para Alertas
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gp-api-alerts
+spec:
+  groups:
+  - name: gp-api-alerts
+    rules:
+    # (conteúdo de monitoring/alerts.yml)
+```
+
 ---
 
 ## Variáveis de Ambiente
@@ -260,8 +367,8 @@ readinessProbe:
 
 ## Próximos Passos (Opcional)
 
-1. **Correlação de Request ID** - Adicionar `req.id` para tracing distribuído
-2. **Alertas** - Configurar regras de alerta no Prometheus/Alertmanager
-3. **Dashboard Grafana** - Criar dashboard com métricas de negócio
-4. **Log Aggregation** - Enviar logs para Loki/Elasticsearch
-5. **Tracing** - Integrar OpenTelemetry para tracing distribuído
+1. **Log Aggregation** - Configurar Loki/Elasticsearch para produção
+2. **Distributed Tracing Backend** - Jaeger/Tempo para visualizar traces
+3. **SLO/SLI Definitions** - Definir Service Level Objectives
+4. **Runbook Documentation** - Documentar procedimentos de incident response
+5. **Chaos Engineering** - Testes de resiliência automatizados

@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: gp-api-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: gp-api-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana-dashboard.json:/var/lib/grafana/dashboards/gp-api-dashboard.json
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: gp-api-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: gp-api-promtail
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - /var/log:/var/log
+      - ./logs:/app/logs
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: gp-api-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:
