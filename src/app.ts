@@ -7,6 +7,10 @@ const authRoutes = require("./routes/auth.routes");
 const gardensRoutes = require("./routes/gardens.routes");
 const logsRoutes = require("./routes/logs.routes");
 const inventoryRoutes = require("./routes/inventory.routes");
+const healthRoutes = require("./routes/health.routes");
+
+const { httpLogger } = require("./middleware/httpLogger");
+const { metricsMiddleware } = require("./middleware/metrics");
 
 if (process.env.NODE_ENV === "production") {
   const raw = process.env.CORS_ORIGIN;
@@ -38,9 +42,9 @@ app.use(
 );
 app.use(express.json({ limit: "512kb" }));
 
-app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
-});
+// Observability middleware
+app.use(httpLogger);
+app.use(metricsMiddleware);
 
 const businessApiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -102,6 +106,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/gardens", businessApiLimiter, gardensRoutes);
 app.use("/api/logs", businessApiLimiter, logsRoutes);
 app.use("/api/inventory", businessApiLimiter, inventoryRoutes);
+
+// Observability routes (no rate limiting)
+app.use("/api", healthRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Rota não encontrada", path: req.path });

@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const app = require("./app");
 const connectDatabase = require("./config/database");
+const { logger } = require("./config/logger");
 
 const PORT = process.env.PORT || 3000;
 
@@ -10,11 +11,11 @@ const startServer = async () => {
     await connectDatabase();
 
     app.listen(PORT, () => {
-      console.log(`[server] Servidor ouvindo na porta ${PORT}`);
+      logger.info({ port: PORT, env: process.env.NODE_ENV }, "Server started");
     });
-  } catch (error: unknown) {
+  } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[server] Falha ao iniciar o servidor:", msg);
+    logger.error({ err: error }, "Failed to start server");
     process.exit(1);
   }
 };
